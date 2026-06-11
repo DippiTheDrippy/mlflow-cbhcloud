@@ -1,0 +1,32 @@
+replicaCount: 1
+
+image:
+  repository: postgres
+  tag: "18.3-alpine"
+  pullPolicy: IfNotPresent
+  # pullSecrets: []  # optional
+
+service:
+  port: 5432
+
+postgres:
+  user: mlflow
+  password: changeme
+  database: mlflow-db-postgres
+  host: mlflow-core-postgres
+
+  # OIDC plugin auth/user/group/permission DB
+  authDatabase: mlflow-auth-db-postgres
+
+  dataMountPath: /var/lib/postgresql/data
+
+persistence:
+  enabled: false
+  size: 10Gi
+  accessMode: ReadWriteOnce
+  storageClassName: mlflow
+
+resources: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,0 +1,13 @@
+postgres:
+  # Secret containing a full SQLAlchemy URI:
+  # postgresql://mlflow:<password>@mlflow-core-postgres:5432/mlflow-db-postgres
+  secret: mlflow-core-postgres
+  secretKey: sqlalchemy-uri
+  secretKeyAuthDb: oidc-uri
+
+keycloak:
+  discoveryUrl: https://test-gitlab-keycloak.app.cloud.cbh.kth.se/realms/gitlab-realm/.well-known/openid-configuration
+  redirectUri: http://localhost:5000/callback
+
+  userGroup: mlflow
+  adminGroup: mlflow-admin

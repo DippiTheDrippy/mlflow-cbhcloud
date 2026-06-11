@@ -1,0 +1,32 @@
+host:
+  mlflow: mlflow.cloud.cbh.kth.se
+
+certmanager:
+  issuerName: go-deploy-cluster-issuer
+
+postgres:
+  # Secret containing a full SQLAlchemy URI:
+  # postgresql://mlflow:<password>@mlflow-core-postgres:5432/mlflow-db-postgres
+  secret: mlflow-core-postgres
+  secretKey: sqlalchemy-uri
+  secretKeyAuthDb: oidc-uri
+
+object_store:
+  # Secret containing object store credentials.
+  secret: mlflow-object-storage
+  accessKeyId: access-key-id
+  secretAccessKey: secret-access-key
+
+  bucket: mlflow
+  prefix: artifacts
+
+  # Set this to your Garage S3 endpoint.
+  # Example only:
+  endpoint: https://garage.cloud.cbh.kth.se
+
+keycloak:
+  discoveryUrl: https://keycloak.gitlab.cloud.cbh.kth.se/realms/<realm-name>/.well-known/openid-configuration
+  redirectUri: https://mlflow.gitlab.cloud.cbh.kth.se/callback
+
+  userGroup: mlflow
+  adminGroup: mlflow-admin

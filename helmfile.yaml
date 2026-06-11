@@ -1,0 +1,30 @@
+helmDefaults:
+  wait: true
+  timeout: 600
+  atomic: true
+  cleanupOnFail: true
+---
+environments:
+  dev:
+    values:
+      - environments/dev/values.yaml
+  prod:
+    values:
+      - environments/prod/values.yaml
+---
+releases:
+  - name: mlflow-core
+    namespace: mlflow
+    createNamespace: true
+    chart: ./charts/mlflow-core
+    values:
+      - environments/{{ .Environment.Name }}/mlflow-core-values.yaml.gotmpl
+
+  - name: mlflow
+    namespace: mlflow
+    createNamespace: true
+    chart: ./charts/mlflow
+    values:
+      - environments/{{ .Environment.Name }}/mlflow-values.yaml.gotmpl
+    needs:
+      - mlflow-core

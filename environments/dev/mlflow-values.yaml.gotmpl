@@ -1,0 +1,94 @@
+replicaCount: 1
+
+image:
+  repository: "registry.cloud.cbh.kth.se/mlflow/mlflow-oidc"
+  tag: "v3.13.0-oidc-7.3.1"
+
+server:
+  value_options:
+    app_name: oidc-auth
+    host: "0.0.0.0"
+    port: 5000
+    workers: 1
+  flag_options: []
+
+mlflow:
+  backendStoreUri: "sqlite:////mlflow/mlflow.db"
+  defaultArtifactRoot: "/mlflow/artifacts"
+  artifactsDestination: "/mlflow/artifacts"
+
+storage:
+  enabled: true
+  size: 5Gi
+  accessMode: ReadWriteOnce
+  storageClassName: ""
+
+env:
+    # OIDC plugin
+  - name: OIDC_DISCOVERY_URL
+    value: {{ .Values.keycloak.discoveryUrl | quote }}
+
+  - name: OIDC_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: mlflow-oidc
+        key: client-id
+
+  - name: OIDC_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: mlflow-oidc
+        key: client-secret
+
+  - name: OIDC_REDIRECT_URI
+    value: {{ .Values.keycloak.redirectUri | quote }}
+
+  - name: OIDC_SCOPE
+    value: "openid profile email"
+
+  - name: OIDC_GROUPS_ATTRIBUTE
+    value: "groups"
+
+  - name: OIDC_GROUP_NAME
+    value: {{ .Values.keycloak.userGroup | quote }}
+
+  - name: OIDC_ADMIN_GROUP_NAME
+    value: {{ .Values.keycloak.adminGroup | quote }}
+
+  - name: OIDC_USERS_DB_URI
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.postgres.secret }}
+        key: {{ .Values.postgres.secretKeyAuthDb }}
+
+  # Required for stable sessions across restarts/replicas.
+  - name: SECRET_KEY
+    valueFrom:
+      secretKeyRef:
+        name: mlflow-oidc
+        key: secret-key
+
+  # Conservative default: users can log in, but do not get broad write access.
+  - name: DEFAULT_MLFLOW_PERMISSION
+    value: "READ"
+
+  - name: OIDC_PROVIDER_DISPLAY_NAME
+    value: "Login with Keycloak"
+
+  - name: LOG_LEVEL
+    value: "INFO"
+
+service:
+  type: ClusterIP
+
+ingress:
+  enabled: false
+
+metrics:
+  enabled: false
+
+serviceMonitor:
+  enabled: false
+
+garbageCollection:
+  enabled: false

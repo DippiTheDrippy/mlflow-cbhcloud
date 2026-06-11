@@ -1,0 +1,151 @@
+{{- $artifactRoot := printf "s3://%s/%s" .Values.object_store.bucket .Values.object_store.prefix -}}
+
+replicaCount: 2
+
+image:
+  repository: "registry.cloud.cbh.kth.se/mlflow/mlflow-oidc"
+  tag: "v3.13.0-oidc-7.3.1"
+
+server:
+  value_options:
+    app_name: oidc-auth
+    host: "0.0.0.0"
+    port: 5000
+    workers: 4
+
+    allowed_hosts: {{ .Values.host.mlflow | quote }}
+
+  flag_options:
+    - enable_workspaces
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: {{ .Values.certmanager.issuerName | quote }}
+  hosts:
+    - host: {{ .Values.host.mlflow | quote }}
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: {{ .Release.Name }}-tls-secret
+      hosts:
+        - {{ .Values.host.mlflow | quote }}
+
+mlflow:
+  # kubectl create secret generic mlflow-db-secret \
+  # --namespace mlflow \
+  # --from-literal=uri="postgresql://user:password@postgres:5432/mlflow"
+  backendStoreUriFrom:
+    secretKeyRef:
+      name: {{ .Values.postgres.secret }}
+      key: {{ .Values.postgres.secretKey }}
+
+  # Required for workspaces.
+  defaultArtifactRoot: {{ $artifactRoot | quote }}
+
+  # kubectl create secret generic s3-credentials \
+  # --namespace mlflow \
+  # --from-literal=access-key-id=<key> \
+  # --from-literal=secret-access-key=<secret>
+  artifactsDestination: {{ $artifactRoot | quote }}
+
+env:
+  - name: AWS_ACCESS_KEY_ID
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.object_store.secret }}
+        key: {{ .Values.object_store.accessKeyId }}
+
+  - name: AWS_SECRET_ACCESS_KEY
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.object_store.secret }}
+        key: {{ .Values.object_store.secretAccessKey }}
+
+  - name: MLFLOW_S3_ENDPOINT_URL
+    value: {{ .Values.object_store.endpoint | quote }}
+
+    # OIDC plugin
+  - name: OIDC_DISCOVERY_URL
+    value: {{ .Values.keycloak.discoveryUrl | quote }}
+
+  - name: OIDC_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: mlflow-oidc
+        key: client-id
+
+  - name: OIDC_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: mlflow-oidc
+        key: client-secret
+
+  - name: OIDC_REDIRECT_URI
+    value: {{ .Values.keycloak.redirectUri | quote }}
+
+  - name: OIDC_SCOPE
+    value: "openid profile email"
+
+  - name: OIDC_GROUPS_ATTRIBUTE
+    value: "groups"
+
+  - name: OIDC_GROUP_NAME
+    value: {{ .Values.keycloak.userGroup | quote }}
+
+  - name: OIDC_ADMIN_GROUP_NAME
+    value: {{ .Values.keycloak.adminGroup | quote }}
+
+  - name: OIDC_USERS_DB_URI
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.postgres.secret }}
+        key: {{ .Values.postgres.secretKeyAuthDb }}
+
+  # Required for stable sessions across restarts/replicas.
+  - name: SECRET_KEY
+    valueFrom:
+      secretKeyRef:
+        name: mlflow-oidc
+        key: secret-key
+
+  # Conservative default: users can log in, but do not get broad write access.
+  - name: DEFAULT_MLFLOW_PERMISSION
+    value: "READ"
+
+  - name: OIDC_PROVIDER_DISPLAY_NAME
+    value: "Login with Keycloak"
+
+  - name: LOG_LEVEL
+    value: "INFO"
+
+storage:
+  enabled: false
+
+tls: 
+  enabled: true
+  secretName: {{ .Release.Name }}-tls-secret
+
+metrics:
+  enabled: true
+  path: /metrics
+
+serviceMonitor:
+  enabled: false
+
+garbageCollection:
+  enabled: true
+  schedule: "0 2 * * 0"
+  allWorkspaces: true
+  olderThan: "30d"
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+

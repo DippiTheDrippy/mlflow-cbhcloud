@@ -1,0 +1,138 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: "{{ .Release.Name }}-postgres"
+  labels:
+    app: "{{ .Release.Name }}-postgres"
+spec:
+  serviceName: "{{ .Release.Name }}-postgres"
+  replicas: {{ default 1 .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: "{{ .Release.Name }}-postgres"
+  template:
+    metadata:
+      labels:
+        app: "{{ .Release.Name }}-postgres"
+    spec:
+      {{- if or (not .Values.persistence.enabled) .Values.postgres.authDatabase }}
+      volumes:
+        {{- if not .Values.persistence.enabled }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+
+        {{- if .Values.postgres.authDatabase }}
+        - name: postgres-init
+          configMap:
+            name: "{{ .Release.Name }}-postgres-init"
+            defaultMode: 0755
+        {{- end }}
+      {{- end }}
+
+      {{- if .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.image.pullSecrets }} 
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+
+      {{- if .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- end }}
+
+      containers:
+        - name: postgres
+          image: "{{ required "values.postgres.image.repository is required" .Values.image.repository }}:{{ required "values.postgres.image.tag is required" .Values.image.tag }}"
+          imagePullPolicy: {{ default "IfNotPresent" .Values.image.pullPolicy }}
+          ports:
+            - name: postgres
+              containerPort: 5432
+              protocol: TCP
+
+          {{- if .Values.securityContext }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- end }}
+
+          env:
+            - name: POSTGRES_USER
+              value: {{ required "values.postgres.user is required" .Values.postgres.user | quote }}
+            - name: POSTGRES_PASSWORD
+              value: {{ required "values.postgres.password is required" .Values.postgres.password | quote }}
+            - name: POSTGRES_DB
+              value: {{ required "values.postgres.database is required" .Values.postgres.database | quote }}
+            - name: PGDATA
+              value: {{ default "/var/lib/postgresql/18/docker" .Values.postgres.dataMountPath | quote }}
+
+
+          volumeMounts:
+            - name: data
+              mountPath: {{ default "/var/lib/postgresql/18/docker" .Values.postgres.dataMountPath | quote }}
+
+            - name: postgres-init
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+
+          {{- if .Values.resources }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- end }}
+
+          {{- if .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          {{- else }}
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          {{- end }}
+
+          {{- if .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          {{- else }}
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          {{- end }}
+
+      {{- if .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.tolerations }}
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 8 }}
+      {{- end }}
+      {{- if .Values.affinity }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}
+      {{- end }}
+
+  {{- if .Values.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          app: "{{ .Release.Name }}-postgres"
+      spec:
+        accessModes:
+          - {{ default "ReadWriteOnce" .Values.persistence.accessMode }}
+        resources:
+          requests:
+            storage: {{ required "values.persistence.size is required" .Values.persistence.size | quote }} 
+        
+        {{- if .Values.persistence.storageClassName }}
+        storageClassName: {{ .Values.persistence.storageClassName | quote }}
+        {{- end }}
+  {{- end }}

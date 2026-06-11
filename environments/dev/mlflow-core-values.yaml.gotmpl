@@ -1,0 +1,16 @@
+postgres:
+  enabled: true
+
+  postgres:
+    user: mlflow
+    password: {{ requiredEnv "MLFLOW_POSTGRES_PASSWORD" | quote }}
+    database: mlflow-db-postgres
+    host: mlflow-core-postgres
+    authDatabase: mlflow-auth-db-postgres
+
+oidc:
+  enabled: true
+  secretName: mlflow-oidc
+  clientId: {{ requiredEnv "MLFLOW_OIDC_CLIENT_ID" | quote }}
+  clientSecret: {{ requiredEnv "MLFLOW_OIDC_CLIENT_SECRET" | quote }}  
+  secretKey: {{ requiredEnv "MLFLOW_OIDC_SECRET_KEY" | quote }}

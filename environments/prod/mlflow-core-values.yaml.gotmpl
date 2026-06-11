@@ -1,0 +1,31 @@
+postgres:
+  enabled: true
+  
+  persistence:
+    enabled: true
+    storageClassName: mlflow-postgres
+
+  postgres:
+    user: mlflow
+    password: {{ requiredEnv "MLFLOW_POSTGRES_PASSWORD" | quote }}
+    database: mlflow-db-postgres
+    host: mlflow-core-postgres
+    authDatabase: mlflow-auth-db-postgres
+
+storageClasses:
+  - name: mlflow-postgres
+    share: /mlflow/postgres
+
+objectStorage:
+  enabled: true
+  secretName: mlflow-object-storage
+  accessKeyId: {{ requiredEnv "MLFLOW_S3_ACCESS_KEY_ID" | quote }}
+  secretAccessKey: {{ requiredEnv "MLFLOW_S3_SECRET_ACCESS_KEY" | quote }}
+  endpointUrl: {{ requiredEnv "MLFLOW_S3_ENDPOINT_URL" | quote }}
+
+oidc:
+  enabled: true
+  secretName: mlflow-oidc
+  clientId: {{ requiredEnv "MLFLOW_OIDC_CLIENT_ID" | quote }}
+  clientSecret: {{ requiredEnv "MLFLOW_OIDC_CLIENT_SECRET" | quote }}  
+  secretKey: {{ requiredEnv "MLFLOW_OIDC_SECRET_KEY" | quote }}

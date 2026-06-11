@@ -1,0 +1,65 @@
+[tools]
+helm = "4.1"
+helmfile = "1.2"
+kubectl = "1.34"
+
+[env]
+KUBE_NAMESPACE = "mlflow"
+_.file = ".env"
+
+# ---- Lint ----
+
+[tasks.lint-dev]
+description = "Lint helmfile for dev environment"
+run = "helmfile -e dev lint"
+
+[tasks.lint-prod]
+description = "Lint helmfile for prod environment"
+run = "helmfile -e prod lint"
+
+# ---- Lint ----
+
+[tasks.tmpl-dev]
+description = "Template helmfile for dev environment"
+run = "helmfile -e dev template"
+
+[tasks.tmpl-prod]
+description = "Template helmfile for prod environment"
+run = "helmfile -e prod template"
+
+# ---- Sync / Apply ----
+
+[tasks.sync-dev]
+description = "Sync (apply) dev environment"
+run = "helmfile -e dev sync"
+
+[tasks.sync-prod]
+description = "Sync (apply) prod environment"
+run = "helmfile -e prod sync"
+
+# ---- Destroy releases ----
+
+[tasks.destroy-dev]
+description = "Destroy dev releases"
+run = "helmfile -e dev destroy"
+
+[tasks.destroy-prod]
+description = "Destroy prod releases"
+run = "helmfile -e prod destroy"
+
+# ---- Clean: destroy + delete namespace ----
+# NOTE: deletes ONLY the namespace in KUBE_NAMESPACE (default: gitlab)
+
+[tasks.clean-dev]
+description = "Destroy dev releases and wipe gitlab namespace"
+run = [
+  "helmfile -e dev destroy",
+  "kubectl get ns \"$KUBE_NAMESPACE\" >/dev/null 2>&1 && kubectl delete ns \"$KUBE_NAMESPACE\" --wait=false || true",
+]
+
+[tasks.clean-prod]
+description = "Destroy prod releases and wipe gitlab namespace"
+run = [
+  "helmfile -e prod destroy",
+  "kubectl get ns \"$KUBE_NAMESPACE\" >/dev/null 2>&1 && kubectl delete ns \"$KUBE_NAMESPACE\" --wait=false || true",
+]

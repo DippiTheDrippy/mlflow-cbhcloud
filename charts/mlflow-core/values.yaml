@@ -1,0 +1,42 @@
+# STORAGE CLASSES
+
+# Define a list of storage classes.
+# Each storage class should have a {{ .name }} and a {{ .share }} path.
+# The {{ .share }} path is relative to the NFS base path defined in nfs.basePath.
+storageClasses:
+  # - name: gitlab
+  #   share: /
+
+# NFS CONFIGURATION
+nfs:
+  # The NFS server address
+  server: nfs.cloud.cbh.kth.se
+  # The base path on the NFS server
+  basePath: /mnt/cloud/apps/sys
+
+minikube:
+  enabled: false
+
+# POSTGRES ENABLED
+postgres:
+  enabled: false
+
+# # GARAGE ENABLED
+# garage:
+#   enabled: true
+
+objectStorage:
+  enabled: false
+
+  secretName: mlflow-object-storage
+  accessKeyId: ""
+  secretAccessKey: ""
+  endpointUrl: ""
+
+oidc:
+  enabled: true
+  secretName: mlflow-oidc
+  clientId: ""
+  clientSecret: ""
+  secretKey: ""
+  usersDbUri: ""
